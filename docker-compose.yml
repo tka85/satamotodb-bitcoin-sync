@@ -1,0 +1,30 @@
+version: '3'
+services:
+    satamoto_bitcoin_node1:
+        image: satamoto-bitcoin-node:latest
+        container_name: satamoto_bitcoin_node1
+        environment:
+            CONTAINER: satamoto_bitcoin_node1
+            DEBUG: satamoto:*
+        volumes:
+            # REQUIRED: uncomment **only one of the following three** lines for mainnet, testnet, regtest respectively
+            # - ./bitcoin-mainnet.conf:/opt/bitcoin/.bitcoin/bitcoin.conf:ro
+            - ./bitcoin-testnet.conf:/opt/bitcoin/.bitcoin/bitcoin.conf:ro
+            # - ./bitcoin-regtest.conf:/opt/bitcoin/.bitcoin/bitcoin.conf:ro
+
+            # OPTIONAL: uncomment and edit accordingly **only one of the following two** lines for mounting locally synced blockchain data (if you have it) for mainnet and testnet respectively. If not, bitcoind will sync chain from scratch
+            # - ~/.bitcoin/:/opt/bitcoin/.bitcoin/
+            - ~/.bitcoin/testnet3/:/opt/bitcoin/.bitcoin/testnet3
+
+            - ./:/opt/app/
+        command: /opt/app/bitcoind-start.sh
+    postgres:
+        image: postgres:10.12
+        container_name: satamoto_postgres
+        environment:
+            POSTGRES_DB: satamoto
+            POSTGRES_PASSWORD: satamoto
+        ports:
+            - '5432'
+        volumes:
+            - ./001-schema.sql:/docker-entrypoint-initdb.d/001-schema.sql

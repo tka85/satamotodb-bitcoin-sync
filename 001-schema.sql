@@ -26,8 +26,7 @@ CREATE TABLE IF NOT EXISTS branch_btc (
     _branch_id serial PRIMARY KEY,
     _fork_height integer NOT NULL,
     _time integer DEFAULT EXTRACT(EPOCH FROM NOW()),
-    _parent_branch integer,
-    FOREIGN KEY (_parent_branch) REFERENCES branch_btc (_branch_id) MATCH FULL ON UPDATE RESTRICT
+    _parent_branch integer
 );
 
 -- consider using genesis block's creation time for initial default branch
@@ -57,9 +56,7 @@ CREATE TABLE IF NOT EXISTS block_btc (
     coinbase text, -- coinbase tx
     _is_valid boolean DEFAULT TRUE,
     UNIQUE (blockhash),
-    UNIQUE (blockhash, _is_valid),
-    FOREIGN KEY (_branch_id) REFERENCES branch_btc (_branch_id) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED,
-    FOREIGN KEY (previousblockhash) REFERENCES block_btc (blockhash) MATCH FULL ON UPDATE RESTRICT
+    UNIQUE (blockhash, _is_valid)
 );
 
 CREATE TABLE IF NOT EXISTS tx_btc (
@@ -76,8 +73,7 @@ CREATE TABLE IF NOT EXISTS tx_btc (
     _is_coinbase boolean,
     _is_valid boolean DEFAULT TRUE,
     _fee bigint,
-    UNIQUE (blockhash, txid, _is_valid),
-    FOREIGN KEY (blockhash, _is_valid) REFERENCES block_btc (blockhash, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED
+    UNIQUE (blockhash, txid, _is_valid)
 );
 
 CREATE TABLE IF NOT EXISTS output_btc (
@@ -96,8 +92,7 @@ CREATE TABLE IF NOT EXISTS output_btc (
     _spent_by_vin integer,
     _is_valid boolean DEFAULT TRUE,
     UNIQUE (blockhash, txid, vout, _is_valid),
-    UNIQUE (_spent_by_blockhash, _spent_by_txid, _spent_by_vin, _is_valid),
-    FOREIGN KEY (blockhash, txid, _is_valid) REFERENCES tx_btc (blockhash, txid, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED
+    UNIQUE (_spent_by_blockhash, _spent_by_txid, _spent_by_vin, _is_valid)
 );
 
 CREATE TABLE IF NOT EXISTS output_address_btc (
@@ -109,8 +104,7 @@ CREATE TABLE IF NOT EXISTS output_address_btc (
     addr_idx integer NOT NULL, -- it can be that the same address apears more than once in single addresses[] of an output
     addrtype typeof_btc_address,
     _is_valid boolean DEFAULT TRUE,
-    UNIQUE (blockhash, txid, vout, addr, addr_idx),
-    FOREIGN KEY (blockhash, txid, vout, _is_valid) REFERENCES output_btc (blockhash, txid, vout, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED
+    UNIQUE (blockhash, txid, vout, addr, addr_idx)
 );
 
 CREATE TABLE IF NOT EXISTS input_btc (
@@ -128,17 +122,23 @@ CREATE TABLE IF NOT EXISTS input_btc (
     txinwitness text[],
     _is_valid boolean DEFAULT TRUE,
     UNIQUE (blockhash, txid, vin),
-    UNIQUE (blockhash, txid, vin, _is_valid),
-    FOREIGN KEY (blockhash, txid, _is_valid) REFERENCES tx_btc (blockhash, txid, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED,
-    FOREIGN KEY (out_blockhash, out_txid, out_vout, _is_valid) REFERENCES output_btc (blockhash, txid, vout, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED
+    UNIQUE (blockhash, txid, vin, _is_valid)
 );
 
 CREATE TABLE IF NOT EXISTS wallet_btc (
     _wallet_addr_id serial PRIMARY KEY,
     walletaddr text NOT NULL,
-    walletaddrtype typeof_btc_address
+    walletaddrtype typeof_btc_address,
+    walletname text
 );
 
-ALTER TABLE output_btc
-    ADD FOREIGN KEY (_spent_by_blockhash, _spent_by_txid, _spent_by_vin, _is_valid) REFERENCES input_btc (blockhash, txid, vin, _is_valid) MATCH SIMPLE ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
-
+-- To speed up things, postpone all foreign key constraints until after the db has been populated with the blockchain data
+-- ALTER TABLE branch_btc ADD FOREIGN KEY (_parent_branch) REFERENCES branch_btc (_branch_id) MATCH FULL ON UPDATE RESTRICT;
+-- ALTER TABLE block_btc ADD FOREIGN KEY (_branch_id) REFERENCES branch_btc (_branch_id) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+-- ALTER TABLE block_btc ADD FOREIGN KEY (previousblockhash) REFERENCES block_btc (blockhash) MATCH FULL ON UPDATE RESTRICT;
+-- ALTER TABLE tx_btc ADD FOREIGN KEY (blockhash, _is_valid) REFERENCES block_btc (blockhash, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+-- ALTER TABLE output_btc ADD FOREIGN KEY (blockhash, txid, _is_valid) REFERENCES tx_btc (blockhash, txid, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+-- ALTER TABLE output_address_btc ADD FOREIGN KEY (blockhash, txid, vout, _is_valid) REFERENCES output_btc (blockhash, txid, vout, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+-- ALTER TABLE input_btc ADD FOREIGN KEY (blockhash, txid, _is_valid) REFERENCES tx_btc (blockhash, txid, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+-- ALTER TABLE input_btc ADD FOREIGN KEY (out_blockhash, out_txid, out_vout, _is_valid) REFERENCES output_btc (blockhash, txid, vout, _is_valid) MATCH FULL ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+-- ALTER TABLE output_btc ADD FOREIGN KEY (_spent_by_blockhash, _spent_by_txid, _spent_by_vin, _is_valid) REFERENCES input_btc (blockhash, txid, vin, _is_valid) MATCH SIMPLE ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;

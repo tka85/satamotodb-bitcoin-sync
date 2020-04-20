@@ -4,7 +4,6 @@ services:
         image: satamoto-bitcoin-node:latest
         container_name: satamoto_bitcoin_node1
         environment:
-            CONTAINER: satamoto_bitcoin_node1
             DEBUG: satamoto:*
         volumes:
             # REQUIRED: uncomment **only one of the following three** lines for mainnet, testnet, regtest respectively

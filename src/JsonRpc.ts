@@ -3,7 +3,8 @@ import JsonRpc2 = require('json-rpc2');
 import config from './config';
 import JsonRpcError from './Errors/JsonRpcError';
 
-const log = debug('satamoto:jsonRpc');
+const log = config.debug.jsonrpc ? debug('satamoto:jsonRpc') : Function.prototype;
+
 const rpcClient = Object.assign(JsonRpc2.Client.$create(config.rpc.port, config.rpc.host), { user: config.rpc.user, password: config.rpc.pass });
 
 class JsonRpc {

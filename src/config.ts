@@ -15,6 +15,17 @@ const config: Config = {
         pass: 'satamoto',
         port: 5432
     },
+    debug: {
+        app: true,
+        database: false,
+        branch: true,
+        block: true,
+        tx: true,
+        output: true,
+        input: true,
+        address: true,
+        jsonrpc: false
+    },
     minConfirmations: 0
 };
 

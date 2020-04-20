@@ -1,7 +1,7 @@
 version: '3'
 services:
     satamoto_bitcoin_node1:
-        image: satamoto-bitcoin-node:latest
+        image: satamotodb-bitcoin-node:latest
         container_name: satamoto_bitcoin_node1
         environment:
             DEBUG: satamoto:*

@@ -10,8 +10,8 @@ import DbError from './Errors/DbError';
 import config from './config';
 import Address from './Address';
 
-const log = debug('satamoto:Database');
-const logError = debug('satamoto:Database:error');
+const log = config.debug.database ? debug('satamoto:Database') : Function.prototype;
+const logError = config.debug.database ? debug('satamoto:Database:error') : Function.prototype;
 
 // Single client for whole app
 const pool = new Pool({

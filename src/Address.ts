@@ -1,8 +1,11 @@
-import bitcoinjs = require('bitcoinjs-lib');
+import debug = require('debug');
 import assert = require('assert');
+import bitcoinjs = require('bitcoinjs-lib');
 import JsonRpc from './JsonRpc';
 import InvalidAddressError from './Errors/InvalidAddressError';
+import config from './config';
 
+const log = config.debug.address ? debug('satamoto:address') : Function.prototype;
 class Address {
     static chain: string;
     static network: bitcoinjs.Network;

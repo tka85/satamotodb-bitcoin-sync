@@ -1,8 +1,9 @@
 import { Address, Script } from './types';
 import Database from './Database';
 import debug = require('debug');
+import config from './config';
 
-const log = debug('satamoto:Output');
+const log = config.debug.output ? debug('satamoto:Output') : Function.prototype;
 
 // Database tx output
 class Output {

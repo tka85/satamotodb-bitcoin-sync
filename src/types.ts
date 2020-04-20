@@ -13,6 +13,17 @@ export type Config = {
         pass: string,
         port: number
     },
+    debug: {
+        app: boolean,
+        database: boolean,
+        branch: boolean,
+        block: boolean,
+        tx: boolean,
+        output: boolean,
+        input: boolean,
+        address: boolean,
+        jsonrpc: boolean
+    },
     minConfirmations: number
 };
 

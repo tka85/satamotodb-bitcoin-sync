@@ -5,20 +5,13 @@ CREATE TYPE typeof_btc_address AS ENUM (
 );
 
 CREATE TYPE typeof_btc_script AS ENUM (
-    'pubkey', -- ScriptPubKey: <Bob's PublicKey> OP_CHECKSIG / ScriptSig: <Alice's Signature>
-    'pubkeyhash', -- ScriptPubKey: OP_DUP OP_HASH160 <PublicKeyHash> OP_EQUALVERIFY OP_CHECKSIG / ScriptSig: <Signature> <PublicKey>
-    'scripthash', -- ScriptPubKey: OP_HASH160 <redeemScriptHash> OP_EQUAL / ScriptSig: <Signature> <PubKey> <redeemScript>
+    'pubkey',
+    'pubkeyhash',
+    'scripthash',
     'multisig',
-    'nulldata', -- OP_RETURN
-    -- Following four are Segwit types
-    -- General format: ScriptPubKey: <1 byte witness-version; only valid is 0 atm> <2-40 bytes witness-program> / ScriptSig: (empty or not) / Witness: <witness items> / RedeemScript: (any or specific)
-    -- First two are native witness; Next two are p2sh wrapped witness
-
-    'witness_v0_keyhash', -- 'P2WPKH' => ScriptPubKey: 0 <20-byte-PublicKeyHash> / ScriptSig: (empty) / Witness: <Signature> <PublicKey>
-    'witness_v0_scripthash', -- 'P2WSH' => ScriptPubKey: 0 <32-byte-redeemScriptHash> / ScriptSig: (empty) / Witness: <witness items> <redeemScript> / RedeemScript: any
-    -- 'P2SH_P2WPKH' (vout "type": "scripthash") => ScriptPubKey: OP_HASH160 <20-byte-redeemScriptHash> OP_EQUAL / ScriptSig: <0 <20-byte-PublicKeyHash>> / Witness: <Signature> <PublicKey> / RedeemScript: 0 <20-byte-PublicKeyHash>
-    -- 'P2SH_P2WSH' (vout "type": "scripthash") => ScriptPubKey: OP_HASH160 <20-byte-P2SH-RedeemScriptHash> OP_EQUAL / ScriptSig: <0 <32-byte-P2WSH-RedeemScriptHash>> / Witness: <witness items> <P2WSH-RedeemScript> / P2SH RedeemScript: <0 <32-byte-P2WSH-RedeemScriptHash>> / P2WSH RedeemScript: (any)
-
+    'nulldata',
+    'witness_v0_keyhash',
+    'witness_v0_scripthash',
     'nonstandard'
 );
 

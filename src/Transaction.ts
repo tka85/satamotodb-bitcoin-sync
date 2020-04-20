@@ -1,7 +1,8 @@
 import Database from "./Database";
 import debug = require('debug');
+import config from "./config";
 
-const log = debug('satamoto:Transaction');
+const log = config.debug.tx ? debug('satamoto:Transaction') : Function.prototype;
 
 class Transaction {
     public blockhash: string;

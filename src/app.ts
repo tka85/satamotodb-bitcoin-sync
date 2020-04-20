@@ -15,8 +15,8 @@ import DbError from './Errors/DbError';
 import InvalidAddressError from './Errors/InvalidAddressError';
 import Address from './Address';
 
-const log = debug('satamoto:app');
-const logError = debug('satamoto:app:error');
+const log = config.debug.app ? debug('satamoto:app') : Function.prototype;
+const logError = config.debug.app ? debug('satamoto:app:error') : Function.prototype;
 
 async function syncDb(startHeight: number = null): Promise<void> {
     await Database.init();

@@ -2,8 +2,9 @@ import JsonRpc from './JsonRpc';
 import Database from './Database';
 import Branch from './Branch';
 import debug = require('debug');
+import config from './config';
 
-const log = debug('satamoto:Block');
+const log = config.debug.block ? debug('satamoto:Block') : Function.prototype;
 
 class Block {
     public blockhash: string;

@@ -18,7 +18,7 @@ CREATE TYPE typeof_btc_script AS ENUM (
 CREATE TABLE IF NOT EXISTS branch_btc (
     _branch_id serial PRIMARY KEY,
     _fork_height integer NOT NULL,
-    _time integer DEFAULT EXTRACT(EPOCH FROM NOW()),
+    _time bigint DEFAULT EXTRACT(EPOCH FROM NOW()),
     _parent_branch integer
 );
 
@@ -30,15 +30,15 @@ CREATE TABLE IF NOT EXISTS block_btc (
     _block_id serial PRIMARY KEY,
     _branch_id integer,
     blockhash text NOT NULL,
-    strippedsize integer,
-    size integer,
-    weight integer,
+    strippedsize bigint,
+    size bigint,
+    weight bigint,
     height integer,
     version integer,
     versionhex text,
     merkleroot text,
-    time integer,
-    mediantime integer,
+    time bigint,
+    mediantime bigint,
     nonce bigint,
     bits text,
     difficulty text,
@@ -58,10 +58,10 @@ CREATE TABLE IF NOT EXISTS tx_btc (
     txid text NOT NULL,
     hash text, -- differs from txid for witness txs
     version integer,
-    size integer,
-    vsize integer, -- differs from size for witness txs
-    weight integer,
-    locktime integer,
+    size bigint,
+    vsize bigint, -- differs from size for witness txs
+    weight bigint,
+    locktime bigint,
     hex text,
     _is_coinbase boolean,
     _is_valid boolean DEFAULT TRUE,

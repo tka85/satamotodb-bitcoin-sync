@@ -8,12 +8,12 @@ services:
         volumes:
             # REQUIRED: uncomment **only one of the following three** lines for mainnet, testnet, regtest respectively
             # - ./bitcoin-mainnet.conf:/opt/bitcoin/.bitcoin/bitcoin.conf:ro
-            - ./bitcoin-testnet.conf:/opt/bitcoin/.bitcoin/bitcoin.conf:ro
-            # - ./bitcoin-regtest.conf:/opt/bitcoin/.bitcoin/bitcoin.conf:ro
+            # - ./bitcoin-testnet.conf:/opt/bitcoin/.bitcoin/bitcoin.conf:ro
+            - ./bitcoin-regtest.conf:/opt/bitcoin/.bitcoin/bitcoin.conf:ro
 
             # OPTIONAL: uncomment and edit accordingly **only one of the following two** lines for mounting locally synced blockchain data (if you have it) for mainnet and testnet respectively. If not, bitcoind will sync chain from scratch
             # - ~/.bitcoin/:/opt/bitcoin/.bitcoin/
-            - ~/.bitcoin/testnet3/:/opt/bitcoin/.bitcoin/testnet3
+            # - ~/.bitcoin/testnet3/:/opt/bitcoin/.bitcoin/testnet3
 
             - ./:/opt/app/
         command: /opt/app/bitcoind-start.sh

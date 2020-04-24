@@ -27,12 +27,6 @@ class Address {
 
     // Returns one of 'legacy', 'p2sh-segwit', 'bech32'
     static getAddressType(addr: string): string {
-        try {
-            bitcoinjs.address.toOutputScript(addr, Address.network);
-        } catch (err) {
-            throw new InvalidAddressError(err.message, addr, Address.chain);
-        }
-
         switch (Address.chain) {
             case 'main':
                 if (addr.startsWith('1')) {
@@ -65,7 +59,7 @@ class Address {
                     return 'bech32';
                 }
         }
-        assert(false, 'Unreachable code !!');
+        return 'INVALID';
     }
 }
 

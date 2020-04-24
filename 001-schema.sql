@@ -12,6 +12,7 @@ CREATE TYPE typeof_btc_script AS ENUM (
     'nulldata',
     'witness_v0_keyhash',
     'witness_v0_scripthash',
+    'witness_unknown',
     'nonstandard'
 );
 

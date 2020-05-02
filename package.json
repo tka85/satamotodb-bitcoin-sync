@@ -1,10 +1,9 @@
 {
-  "name": "satamotodb",
+  "name": "satamotodb-bitcoin-sync",
   "version": "1.0.0",
   "scripts": {
     "build": "rm -rf dist/* && npm run lint && tsc",
     "lint": "tslint --project tsconfig.json",
-    "postinstall": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
@@ -12,16 +11,14 @@
     "@types/node": "13.11.1",
     "@types/pg": "7.14.3",
     "big.js": "5.2.2",
-    "bitcoinjs-lib": "5.1.7",
     "debug": "4.1.1",
     "json-rpc2": "2.0.0",
-    "pg": "8.0.2"
-  },
-  "devDependencies": {
+    "pg": "8.0.2",
     "tslint": "6.1.1",
     "typescript": "3.8.3"
   },
-  "description": "Application that exports blockchain data (blocks, txs, inputs, outputs, addresses etc.) and stores them into a Postgres database",
+  "devDependencies": {},
+  "description": "Application that exports blockchain data (blocks, txs, inputs, outputs, addresses etc.) and stores them into a Postgres database. Part of the satamotodb project.",
   "author": "https://github.com/tka85",
   "license": "MIT",
   "engines": {

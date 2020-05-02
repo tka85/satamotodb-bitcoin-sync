@@ -1,8 +1,8 @@
 import Database from "./Database";
 import debug = require('debug');
-import config from "./config";
+import appConfig from './appConfig.json';
 
-const log = config.debug.branch ? debug('satamoto:Branch') : Function.prototype;
+const log = appConfig.debug.branch ? debug('satamoto:Branch') : Function.prototype;
 
 class Branch {
 

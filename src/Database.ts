@@ -7,19 +7,20 @@ import Output from './Output';
 import Input from './Input';
 import ForkDetectedError from './Errors/ForkDetectedError';
 import DbError from './Errors/DbError';
-import config from './config';
+import appConfig from './appConfig.json';
+import dbConfig from './dbConfig.json';
 import Address from './Address';
 
-const log = config.debug.database ? debug('satamoto:Database') : Function.prototype;
-const logError = config.debug.database ? debug('satamoto:Database:error') : Function.prototype;
+const log = appConfig.debug.database ? debug('satamoto:Database') : Function.prototype;
+const logError = appConfig.debug.database ? debug('satamoto:Database:error') : Function.prototype;
 
 // Single client for whole app
 const pool = new Pool({
-    user: config.pg.user,
-    host: config.pg.host,
-    database: config.pg.db,
-    password: config.pg.pass,
-    port: config.pg.port
+    user: dbConfig.user,
+    host: dbConfig.host,
+    database: dbConfig.db,
+    password: dbConfig.pass,
+    port: dbConfig.port
 });
 
 // the pool will emit an error on behalf of any idle clients

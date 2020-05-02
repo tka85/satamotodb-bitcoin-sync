@@ -1,8 +1,8 @@
 import Database from "./Database";
 import debug = require('debug');
-import config from "./config";
+import appConfig from './appConfig.json';
 
-const log = config.debug.input ? debug('satamoto:Input') : Function.prototype;
+const log = appConfig.debug.input ? debug('satamoto:Input') : Function.prototype;
 
 class Input {
     public blockhash: string;

@@ -6,17 +6,16 @@ import Block from './Block';
 import Input from './Input';
 import Output from './Output';
 import Database from './Database';
-import config from './config';
+import appConfig from './appConfig.json';
 import Transaction from './Transaction';
 import Branch from './Branch';
 import ForkDetectedError from './Errors/ForkDetectedError';
 import JsonRpcError from './Errors/JsonRpcError';
 import DbError from './Errors/DbError';
-import InvalidAddressError from './Errors/InvalidAddressError';
 import Address from './Address';
 
-const log = config.debug.app ? debug('satamoto:app') : Function.prototype;
-const logError = config.debug.app ? debug('satamoto:app:error') : Function.prototype;
+const log = appConfig.debug.app ? debug('satamoto:app') : Function.prototype;
+const logError = appConfig.debug.app ? debug('satamoto:app:error') : Function.prototype;
 
 async function syncDb(startHeight: number = null): Promise<void> {
     await Database.init();
@@ -24,9 +23,9 @@ async function syncDb(startHeight: number = null): Promise<void> {
 
     const dbHeight = startHeight || await Database.getBestBlockHeight();
     const chainBlockcount = await JsonRpc.doRequest('getblockcount', []);
-    const heightLimit = Math.max(chainBlockcount - config.minConfirmations, 0);
+    const heightLimit = Math.max(chainBlockcount - appConfig.minConfirmations, 0);
     if (dbHeight + 1 > heightLimit) {
-        log(`No syncing; db has ${dbHeight} blocks; chain has ${chainBlockcount} and required minConfirmation = ${config.minConfirmations}`);
+        log(`No syncing; db has ${dbHeight} blocks; chain has ${chainBlockcount} and required minConfirmation = ${appConfig.minConfirmations}`);
         return;
     }
     log(`Syncing db with chain for blocks ${dbHeight} ==> ${heightLimit} (out of total ${chainBlockcount} on chain)`);
@@ -129,9 +128,6 @@ async function syncDb(startHeight: number = null): Promise<void> {
         } else if (err instanceof DbError) {
             await Database.rollbackTransaction();
             logError(`Failed database query "${err.sql}" with params "${JSON.stringify(err.params)}". ERROR:`, err.message, 'STACK:', err.stack);
-        } else if (err instanceof InvalidAddressError) {
-            await Database.rollbackTransaction();
-            logError(`Failed to validate address "${err.address}" for network "${err.network}". ERROR:`, err.message, 'STACK:', err.stack);
         } else {
             logError('*** Unknown error', err);
         }
@@ -140,12 +136,22 @@ async function syncDb(startHeight: number = null): Promise<void> {
     }
 }
 
-// Kickstart syncing
-syncDb()
-    .catch(async (err) => {
-        logError(err);
-    })
-    .finally(async () => {
-        await Database.shutdown();
+async function sleep(t = 10000) {
+    log(`Sleeping for ${t / 1000}s...`);
+    return new Promise((res, rej) => {
+        setTimeout(() => {
+            res();
+        }, t);
     });
+}
 
+; (async function infinity() {
+    while (true) {
+        // Kickstart syncing
+        await syncDb()
+            .catch(async (err) => {
+                logError(err);
+            })
+        await sleep();
+    }
+})();

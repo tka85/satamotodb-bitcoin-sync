@@ -1,28 +1,13 @@
 import debug = require('debug');
-import assert = require('assert');
-import bitcoinjs = require('bitcoinjs-lib');
 import JsonRpc from './JsonRpc';
-import InvalidAddressError from './Errors/InvalidAddressError';
-import config from './config';
+import appConfig from './appConfig.json';
 
-const log = config.debug.address ? debug('satamoto:address') : Function.prototype;
+const log = appConfig.debug.address ? debug('satamoto:address') : Function.prototype;
 class Address {
     static chain: string;
-    static network: bitcoinjs.Network;
 
     static async init() {
         Address.chain = (await JsonRpc.doRequest('getmininginfo', [])).chain;
-        switch (Address.chain) {
-            case 'main':
-                Address.network = bitcoinjs.networks.bitcoin;
-                break;
-            case 'test':
-                Address.network = bitcoinjs.networks.testnet;
-                break;
-            case 'regtest':
-                Address.network = bitcoinjs.networks.regtest;
-                break;
-        }
     }
 
     // Returns one of 'legacy', 'p2sh-segwit', 'bech32'

@@ -1,14 +1,15 @@
 {
+    "provided by the": "satamotodb project's docker-compose.yml",
     "debug": {
         "app": true,
-        "database": false,
+        "database": true,
         "branch": true,
         "block": true,
         "tx": true,
         "output": true,
         "input": true,
         "address": true,
-        "jsonrpc": false
+        "jsonrpc": true
     },
     "minConfirmations": 0
 }

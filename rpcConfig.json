@@ -1,0 +1,8 @@
+{
+    "provided by the": "satamotodb project's docker-compose.yml",
+    "host": "",
+    "port": 8332,
+    "user": "",
+    "pass": "",
+    "timeout": 120000
+}

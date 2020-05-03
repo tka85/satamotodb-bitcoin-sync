@@ -1,8 +1,8 @@
 import debug = require('debug');
 import JsonRpc2 = require('json-rpc2');
-import appConfig from './appConfig.json';
-import rpcConfig from './rpcConfig.json';
 import JsonRpcError from './Errors/JsonRpcError';
+import appConfig from '../appConfig.json';
+import rpcConfig from '../rpcConfig.json';
 
 const log = appConfig.debug.jsonrpc ? debug('satamoto:jsonRpc') : Function.prototype;
 

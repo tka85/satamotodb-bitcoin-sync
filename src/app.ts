@@ -6,13 +6,13 @@ import Block from './Block';
 import Input from './Input';
 import Output from './Output';
 import Database from './Database';
-import appConfig from './appConfig.json';
 import Transaction from './Transaction';
 import Branch from './Branch';
 import ForkDetectedError from './Errors/ForkDetectedError';
 import JsonRpcError from './Errors/JsonRpcError';
 import DbError from './Errors/DbError';
 import Address from './Address';
+import appConfig from '../appConfig.json';
 
 const log = appConfig.debug.app ? debug('satamoto:app') : Function.prototype;
 const logError = appConfig.debug.app ? debug('satamoto:app:error') : Function.prototype;
@@ -38,7 +38,6 @@ async function syncDb(startHeight: number = null): Promise<void> {
             if (!await Block.exists({ height, blockhash: chainBlockhash })) {
                 const chainBlock = await JsonRpc.doRequest('getblock', [chainBlockhash, 2]);
                 const dbBlock = new Block(chainBlock);
-                await dbBlock.setBranch();
                 await dbBlock.save();
                 let isFirstTxOfBlock = true;
                 for (const chainTx of chainBlock.tx) {
@@ -48,8 +47,8 @@ async function syncDb(startHeight: number = null): Promise<void> {
                         assert(chainTx.vin.length === 1);
                         chainTx.isCoinbase = true;
                     }
-                    log(`height=${height} / tx=${chainTx.txid} (coinbase? ${chainTx.isCoinbase})`);
-                    chainTx.blockhash = chainBlockhash;
+                    log(`height=${height} / tx=${chainTx.txid}`);
+                    chainTx._blockSerial = dbBlock._blockSerial;
                     const dbTx = new Transaction(chainTx);
                     await dbTx.save();
 
@@ -58,8 +57,7 @@ async function syncDb(startHeight: number = null): Promise<void> {
                     for (const chainOutput of chainTx.vout) {
                         const outValue = new Big(chainOutput.value).times(1e8);
                         const dbOutput = new Output({
-                            blockhash: chainBlockhash,
-                            txid: dbTx.txid,
+                            _txSerial: dbTx._txSerial,
                             isCoinbase: dbTx.isCoinbase,
                             vout: chainOutput.n,
                             value: parseInt(outValue.toFixed(), 10),
@@ -79,15 +77,12 @@ async function syncDb(startHeight: number = null): Promise<void> {
                         } else {
                             const outTxid = chainTx.vin[i].txid;
                             const outVout = chainTx.vin[i].vout;
-                            const outBlockhash = await Output.getBlockhash({ txid: outTxid, vout: outVout });
-                            const outValue = await Output.getValue({ blockhash: outBlockhash, txid: outTxid, vout: outVout });
+                            const _outOutputSerial = await Output.getSerial({ txid: outTxid, vout: outVout });
+                            const outValue = await Output.getValue({ outputSerial: _outOutputSerial });
                             const dbInput = new Input({
-                                blockhash: dbTx.blockhash,
-                                txid: dbTx.txid,
+                                _txSerial: dbTx._txSerial,
                                 vin: i,
-                                outBlockhash,
-                                outTxid,
-                                outVout,
+                                _outOutputSerial,
                                 outValue,
                                 seq: chainTx.vin[i].sequence,
                                 scriptAsm: chainTx.vin[i].scriptSig && chainTx.vin[i].scriptSig.asm || null,
@@ -115,9 +110,9 @@ async function syncDb(startHeight: number = null): Promise<void> {
             // Find height of best common block between Db and Chain
             log('Rewinding to find best common block with chain');
             const bestCommonBlockHeight = await Block.getHeightOfBestBlockCommonWithChain();
-            const bestCommonBlockBranchId = await Block.getBranchIdByHeight(bestCommonBlockHeight);
+            const bestCommonBlockBranchSerial = await Block.getBranchSerialByHeight(bestCommonBlockHeight);
             // Add new branch for fork; its parent branch is the branch of the best common block between db and chain
-            await Branch.addNew(bestCommonBlockHeight, bestCommonBlockBranchId);
+            await Branch.addNew(bestCommonBlockHeight, bestCommonBlockBranchSerial);
             // Invalidate all db blocks from bestCommonBlockHeight upwards
             Block.invalidateHigherThan(bestCommonBlockHeight);
             // Recursive call to sync from height of best common block

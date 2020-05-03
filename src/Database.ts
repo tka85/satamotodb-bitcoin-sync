@@ -7,9 +7,9 @@ import Output from './Output';
 import Input from './Input';
 import ForkDetectedError from './Errors/ForkDetectedError';
 import DbError from './Errors/DbError';
-import appConfig from './appConfig.json';
-import dbConfig from './dbConfig.json';
 import Address from './Address';
+import appConfig from '../appConfig.json';
+import dbConfig from '../dbConfig.json';
 
 const log = appConfig.debug.database ? debug('satamoto:Database') : Function.prototype;
 const logError = appConfig.debug.database ? debug('satamoto:Database:error') : Function.prototype;
@@ -47,7 +47,7 @@ class Database {
         return Promise.resolve();
     }
 
-    static async doQuery(sql: string, params: any[] = []): Promise<QueryResult> {
+    static async doQuery(sql: string, params: any[] = []): Promise<any> {
         try {
             return await Database.client.query(sql, params);
         } catch (err) {
@@ -98,91 +98,90 @@ class Database {
         return Promise.resolve(true);
     }
 
-    static async saveBlock(block: Block): Promise<void> {
+    static async saveBlock(block: Block): Promise<number> {
         log(`Saving`, block);
-        const sql = 'INSERT INTO block_btc(_branch_id, blockhash, strippedsize, size, weight, height, version, versionhex, merkleroot, time, mediantime, nonce, bits, difficulty, chainwork, ntx, previousblockhash, _is_valid) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)';
-        const params = [block._branchId, block.blockhash, block.strippedSize, block.size, block.weight, block.height, block.version, block.versionHex, block.merkleRoot, block.time, block.medianTime, block.nonce, block.bits, block.difficulty, block.chainwork, block.nTx, block.previousBlockhash, true];
-        log(`Saving block `, block);
-        await Database.doQuery(sql, params);
-        return Promise.resolve();
+        const sql = 'INSERT INTO block_btc(_branch_serial, blockhash, strippedsize, size, weight, height, version, versionhex, merkleroot, time, mediantime, nonce, bits, difficulty, chainwork, ntx, previousblockhash, _is_valid) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, true) RETURNING _block_serial';
+        const params = [block._branchSerial, block.blockhash, block.strippedSize, block.size, block.weight, block.height, block.version, block.versionHex, block.merkleRoot, block.time, block.medianTime, block.nonce, block.bits, block.difficulty, block.chainwork, block.nTx, block.previousBlockhash];
+        log(`Saving block`, block);
+        const insertedBlockSerial = await Database.doQuery(sql, params);
+        return Promise.resolve(insertedBlockSerial.rows[0]._block_serial);
     }
 
-    static async saveTransaction(tx: Transaction): Promise<void> {
-        log(`Saving `, tx);
-        const res = await Database.doQuery(
-            'INSERT INTO tx_btc(blockhash, txid, hash, size, vsize, weight, version, locktime, hex, _is_coinbase, _is_valid) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)',
-            [tx.blockhash, tx.txid, tx.hash, tx.size, tx.vsize, tx.weight, tx.version, tx.locktime, tx.hex, tx.isCoinbase, true]
-        );
-        return Promise.resolve();
+    static async saveTransaction(tx: Transaction): Promise<number> {
+        log(`Saving`, tx);
+        const sql = 'INSERT INTO tx_btc(_block_serial, txid, hash, size, vsize, weight, version, locktime, hex, _is_coinbase, _is_valid) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true) RETURNING _tx_serial';
+        const params = [tx._blockSerial, tx.txid, tx.hash, tx.size, tx.vsize, tx.weight, tx.version, tx.locktime, tx.hex, tx.isCoinbase];
+        const insertedTxSerial = await Database.doQuery(sql, params);
+        return Promise.resolve(insertedTxSerial.rows[0]._tx_serial);
     }
 
-    static async saveTransactionFee(tx: Transaction): Promise<void> {
+    static async updateTransactionFee(tx: Transaction): Promise<void> {
         log(`Saving fee for`, tx);
-        await Database.doQuery(
-            'UPDATE tx_btc SET _fee = $1 WHERE blockhash = $2 AND txid = $3 AND _is_valid = $4',
-            [tx.fee, tx.blockhash, tx.txid, true]
-        );
+        const sql = 'UPDATE tx_btc SET _fee = $1 WHERE _tx_serial=$2 AND _is_valid = true RETURNING _tx_serial';
+        const params = [tx.fee, tx._txSerial];
+        const updatedTxSerials = await Database.doQuery(sql, params);
+        if (updatedTxSerials.rows.length !== 1) {
+            throw new DbError(`Should have a single *valid* tx in db for _tx_serial ${tx._txSerial} but found ${updatedTxSerials.rows.length} (_tx_serials: ${JSON.stringify(updatedTxSerials.rows)})`, sql, params);
+        }
         return Promise.resolve();
     }
 
-    static async saveOutput(o: Output): Promise<void> {
+    static async saveOutput(o: Output): Promise<number> {
         log(`Saving`, o);
-        let sql = 'INSERT INTO output_btc(blockhash, txid, vout, value, reqsigs, scriptasm, scripthex, scripttype, _spent_by_blockhash, _spent_by_txid,  _spent_by_vin, _is_spent, _is_valid) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)';
-        let params = [o.blockhash, o.txid, o.vout, o.value, o.reqSigs, o.scriptAsm, o.scriptHex, o.scriptType, o._spentByBlockhash, o._spentByTxid, o._spentByVin, o._isSpent, true];
-        await Database.doQuery(sql, params);
+        let sql = 'INSERT INTO output_btc(_tx_serial, vout, value, reqsigs, scriptasm, scripthex, scripttype, _spent_by_input_serial, _is_spent, _is_valid) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true) RETURNING _output_serial';
+        let params = [o._txSerial, o.vout, o.value, o.reqSigs, o.scriptAsm, o.scriptHex, o.scriptType, o._spentByInputSerial, o._isSpent];
+        const insertedOutputSerial = await Database.doQuery(sql, params);
         if (o.addresses) { // check because output of genesis block in regtest does not have addresses[] (??)
-            let addrIndex = 0;
-            for (const nextAddr of o.addresses) {
-                sql = 'INSERT INTO output_address_btc(blockhash, txid, vout, addr, addr_idx, addrtype, _is_valid) VALUES($1, $2, $3, $4, $5, $6, $7)';
-                params = [o.blockhash, o.txid, o.vout, nextAddr, addrIndex, Address.getAddressType(nextAddr), true];
+            o.addresses.forEach(async (nextAddr, addrIndex) => {
+                sql = 'INSERT INTO output_address_btc(_output_serial, addr, addr_idx, addrtype, _is_valid) VALUES($1, $2, $3, $4, true)';
+                params = [insertedOutputSerial.rows[0]._output_serial, nextAddr, addrIndex, Address.getAddressType(nextAddr)];
                 await Database.doQuery(sql, params);
-                addrIndex++;
-            }
+            });
         }
-        return Promise.resolve();
+        return Promise.resolve(insertedOutputSerial.rows[0]._output_serial);
     }
 
-    static async saveInput(i: Input): Promise<void> {
+    static async saveInput(i: Input): Promise<number> {
         log(`Saving`, i);
-        let sql = 'INSERT INTO input_btc(blockhash, txid, vin,  seq, out_blockhash, out_txid, out_vout, out_value, scriptasm, scripthex, txinwitness, _is_valid) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)';
-        let params = [i.blockhash, i.txid, i.vin, i.seq, i.outBlockhash, i.outTxid, i.outVout, i.outValue, i.scriptAsm, i.scriptHex, i.txInWitness, true];
-        await Database.doQuery(sql, params);
-        sql = 'UPDATE output_btc SET _spent_by_blockhash = $1, _spent_by_txid = $2, _spent_by_vin = $3, _is_spent = true WHERE blockhash = $4 AND txid = $5 AND vout = $6 AND value = $7 AND _is_valid = true RETURNING _output_id';
-        params = [i.blockhash, i.txid, i.vin, i.outBlockhash, i.outTxid, i.outVout, i.outValue];
-        const updated = await Database.doQuery(sql, params);
-        if (updated.rows.length !== 1) {
-            throw new DbError(`Should have a single *valid* output in db for blockhash=${i.outBlockhash} / txid=${i.outTxid} / vout=${i.outVout} but found ${updated.rows.length} (_output_ids: ${JSON.stringify(updated.rows)})`, sql, params);
+        let sql = 'INSERT INTO input_btc(_tx_serial, vin, _out_output_serial, out_value, seq, scriptasm, scripthex, txinwitness, _is_valid) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true) RETURNING _input_serial';
+        let params = [i._txSerial, i.vin, i._outOutputSerial, i.outValue, i.seq, i.scriptAsm, i.scriptHex, i.txInWitness];
+        const insertedInputSerial = await Database.doQuery(sql, params);
+        sql = 'UPDATE output_btc SET _spent_by_input_serial = $1, _is_spent = true WHERE _output_serial = $2 AND _is_valid = true RETURNING _output_serial';
+        params = [insertedInputSerial.rows[0]._input_serial, i._outOutputSerial];
+        const updatedOutputSerials = await Database.doQuery(sql, params);
+        if (updatedOutputSerials.rows.length !== 1) {
+            throw new DbError(`Should have a single *valid* output in db for _output_serial = ${i._outOutputSerial} but found ${updatedOutputSerials.rows.length} (_output_serials: ${JSON.stringify(updatedOutputSerials.rows)})`, sql, params);
         }
-        return Promise.resolve();
+        return Promise.resolve(insertedInputSerial.rows[0]._input_serial);
     }
 
     static async updateBlockCoinbase(block: Block): Promise<void> {
         log(`Setting block seq/coinbase to ${block.seq}/${block.coinbase}`);
-        const sql = `UPDATE block_btc SET seq = $1, coinbase = $2 WHERE blockhash = $3 AND _is_valid = true RETURNING _block_id`;
+        const sql = `UPDATE block_btc SET seq = $1, coinbase = $2 WHERE blockhash = $3 AND _is_valid = true RETURNING _block_serial`;
         const params = [block.seq, block.coinbase, block.blockhash];
-        const updated = await Database.doQuery(sql, params);
-        if (updated.rows.length !== 1) {
-            throw new DbError(`Should have a single *valid* block in db for blockhash=${block.blockhash} but found ${updated.rows.length} (_block_ids: ${JSON.stringify(updated.rows)})`, sql, params);
+        const updatedBlockSerials = await Database.doQuery(sql, params);
+        if (updatedBlockSerials.rows.length !== 1) {
+            throw new DbError(`Should have a single *valid* block in db for blockhash=${block.blockhash} but found ${updatedBlockSerials.rows.length} (_block_serials: ${JSON.stringify(updatedBlockSerials.rows)})`, sql, params);
         }
         return Promise.resolve();
     }
 
-    static async getBestBranchId(): Promise<number> {
-        const res = await Database.doQuery('SELECT max(_branch_id) AS current_branch_id FROM branch_btc');
-        log(`Best branch id:`, res.rows[0].current_branch_id);
-        return Promise.resolve(res.rows[0].current_branch_id);
+    static async getBestBranchSerial(): Promise<number> {
+        const res = await Database.doQuery('SELECT max(_branch_serial) AS current_branch_serial FROM branch_btc');
+        log(`Best branch serial:`, res.rows[0].current_branch_serial);
+        return Promise.resolve(res.rows[0].current_branch_serial);
     }
 
-    // We add new branch when there is a fork; parentBranchId is the branchId of the block at which the fork takes place
-    static async addNewBranch(forkHeight: number, parentBranchId: number): Promise<number> {
-        const sql = 'INSERT INTO branch_btc(_fork_height, _parent_branch) VALUES($1, $2) RETURNING _branch_id';
-        const params = [forkHeight, parentBranchId];
-        const res = await Database.doQuery(sql, params);
-        if (!res.rows[0] || !res.rows[0]._branch_id) {
-            throw new DbError(`Failed to insert new branch @forkHeight ${forkHeight} with parent branch id ${parentBranchId}`, sql, params);
+    // We add new branch when there is a fork; parentBranchSerial is the branchSerial of the block at which the fork takes place
+    static async addNewBranch(forkHeight: number, parentBranchSerial: number): Promise<number> {
+        const sql = 'INSERT INTO branch_btc(_fork_height, _parent_branch_serial) VALUES($1, $2) RETURNING _branch_serial';
+        const params = [forkHeight, parentBranchSerial];
+        const insertedBranchSerial = await Database.doQuery(sql, params);
+        if (!insertedBranchSerial.rows[0] || !insertedBranchSerial.rows[0]._branch_serial) {
+            throw new DbError(`Failed to insert new branch @forkHeight ${forkHeight} with parent branch serial ${parentBranchSerial}`, sql, params);
         }
-        log(`Added new branch`, res.rows[0]._branch_id);
-        return Promise.resolve(res.rows[0]._branch_id);
+        log(`Added new branch`, insertedBranchSerial.rows[0]._branch_serial);
+        return Promise.resolve(insertedBranchSerial.rows[0]._branch_serial);
     }
 
     static async getBestBlockHeight(): Promise<number> {
@@ -206,15 +205,15 @@ class Database {
         return Promise.resolve(res.rows[0].blockhash);
     }
 
-    static async getBlockBranchIdByHeight(height: number): Promise<number> {
-        const sql = 'SELECT _branch_id FROM block_btc WHERE height = $1  AND _is_valid = true';
+    static async getBlockBranchSerialByHeight(height: number): Promise<number> {
+        const sql = 'SELECT _branch_serial FROM block_btc WHERE height = $1  AND _is_valid = true';
         const params = [height];
         const res = await Database.doQuery(sql, params);
-        if (!res.rows[0] || !res.rows[0]._branch_id) {
+        if (!res.rows[0] || !res.rows[0]._branch_serial) {
             throw new DbError(`Invalid height; no valid db block at height ${height}`, sql, params);
         }
-        log(`Branch id of block @height ${height} is ${res.rows[0]._branch_id}`);
-        return Promise.resolve(res.rows[0]._branch_id);
+        log(`Branch serial of block @height ${height} is ${res.rows[0]._branch_serial}`);
+        return Promise.resolve(res.rows[0]._branch_serial);
     }
 
     // Invalidate blocks higher than the block @startHeight
@@ -223,24 +222,24 @@ class Database {
         return Promise.resolve();
     }
 
-    static async getOutputBlockhash({ txid, vout }: { txid: string, vout: number }): Promise<string> {
-        const sql = 'SELECT blockhash FROM output_btc WHERE txid = $1 AND vout = $2 AND _is_valid = true';
+    static async getOutputSerial({ txid, vout }: { txid: string, vout: number }): Promise<number> {
+        const sql = 'SELECT _output_serial FROM output_btc, tx_btc WHERE output_btc._tx_serial = tx_btc._tx_serial AND txid = $1 AND vout = $2 AND output_btc._is_valid = true';
         const params = [txid, vout];
         const res = await Database.doQuery(sql, params);
         if (res.rows.length !== 1) {
             // For given txid:vout only a single output in db can be valid
             throw new DbError(`Should have a single *valid* output in db for txid=${txid} / vout=${vout} but found ${res.rows.length} (hashes: ${JSON.stringify(res.rows)})`, sql, params);
         }
-        return Promise.resolve(res.rows[0].blockhash);
+        return Promise.resolve(res.rows[0]._output_serial);
     }
 
-    static async getOutputValue({ blockhash, txid, vout }: { blockhash: string, txid: string, vout: number }): Promise<number> {
-        const sql = 'SELECT value FROM output_btc WHERE blockhash = $1 AND txid = $2 AND vout = $3 AND _is_valid = true';
-        const params = [blockhash, txid, vout];
+    static async getOutputValue({ outputSerial }: { outputSerial: number }): Promise<number> {
+        const sql = 'SELECT value FROM output_btc WHERE _output_serial = $1 AND _is_valid = true';
+        const params = [outputSerial];
         const res = await Database.doQuery(sql, params);
         if (res.rows.length !== 1) {
-            // For given blockhash:txid:vout only a single output in db can be valid
-            throw new DbError(`Should have a single *valid* output in db for blockhash=${blockhash} / txid=${txid} / vout=${vout} but found ${res.rows.length} (values: ${JSON.stringify(res.rows)})`, sql, params);
+            // For given outputSerial only a single output in db can be valid
+            throw new DbError(`Should have a single *valid* output in db for _output_serial=${outputSerial} but found ${res.rows.length} (values: ${JSON.stringify(res.rows)})`, sql, params);
         }
         return Promise.resolve(res.rows[0].value);
     }

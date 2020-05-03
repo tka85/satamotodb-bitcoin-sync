@@ -6,7 +6,7 @@ ENV APP_USER_NAME='satamoto' \
     NODE_VERSION='v12.16.1'
 
 RUN apt-get update && \
-    apt-get install python curl jq vim -y && \
+    apt-get install python curl postgresql-client-10 jq vim -y && \
     apt-get clean && \
     rm -r /var/lib/apt/lists/* && \
     groupadd -g ${APP_GROUP_ID} ${APP_USER_NAME} && \
@@ -22,8 +22,7 @@ RUN cd /opt && \
     ln -s /opt/node-${NODE_VERSION}-linux-x64/bin/npm /usr/local/bin/npm && \
     rm node-${NODE_VERSION}-linux-x64.tar.xz
 
-USER root
-COPY package.json package-lock.json tsconfig.json tslint.json ${APP_HOME}/
+COPY package.json package-lock.json tsconfig.json tslint.json appConfig.json dbConfig.json rpcConfig.json ${APP_HOME}/
 COPY src ${APP_HOME}/src
 RUN cd ${APP_HOME} && \
     npm i --only=prod && \

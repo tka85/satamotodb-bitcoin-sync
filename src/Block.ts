@@ -2,11 +2,13 @@ import JsonRpc from './JsonRpc';
 import Database from './Database';
 import Branch from './Branch';
 import debug = require('debug');
-import appConfig from './appConfig.json';
+import appConfig from '../appConfig.json';
 
 const log = appConfig.debug.block ? debug('satamoto:Block') : Function.prototype;
 
 class Block {
+    public _blockSerial: number;
+    public _branchSerial;
     public blockhash: string;
     public strippedSize: number;
     public size: number;
@@ -25,7 +27,6 @@ class Block {
     public previousBlockhash;
     public seq: number;
     public coinbase: string;
-    public _branchId;
 
     constructor({ hash, size, strippedsize, weight, height, version, versionHex, merkleroot, time, mediantime, nonce, bits, difficulty, chainwork, nTx, previousblockhash }
         : { hash: string, size: number, strippedsize: number, weight: number, height: number, version: number, versionHex: string, merkleroot: string, time: number, mediantime: number, nonce: number, bits: string, difficulty: string, chainwork: string, nTx: number, previousblockhash: string }) {
@@ -45,7 +46,7 @@ class Block {
         this.chainwork = chainwork;
         this.nTx = nTx;
         this.previousBlockhash = previousblockhash;
-        this._branchId = null; // will be filled in upon saving to db
+        this._branchSerial = null; // will be filled in upon saving to db
     }
 
     static async exists({ height, blockhash }: { height: number, blockhash: string }): Promise<boolean> {
@@ -53,19 +54,21 @@ class Block {
     }
 
     async setBranch(): Promise<void> {
-        this._branchId = await Branch.getBestId();
-        log(`Setting block branch id to`, this._branchId);
+        this._branchSerial = await Branch.getBestSerial();
+        log(`Set block branch serial to`, this._branchSerial);
+        return Promise.resolve();
+    }
+
+    async save(): Promise<void> {
+        this.setBranch();
+        this._blockSerial = await Database.saveBlock(this);
         return Promise.resolve();
     }
 
     async updateCoinbase({ seq, coinbase }: { seq: number, coinbase: string }): Promise<void> {
         this.seq = seq;
         this.coinbase = coinbase;
-        return Database.updateBlockCoinbase(this);
-    }
-
-    async save() {
-        return await Database.saveBlock(this);
+        return await Database.updateBlockCoinbase(this);
     }
 
     // Starts at best block in db and moves downwards until it find the first block that is in common with chain and returns its height
@@ -86,8 +89,8 @@ class Block {
         return Promise.resolve(nextHeight);
     }
 
-    static async getBranchIdByHeight(height: number): Promise<number> {
-        return await Database.getBlockBranchIdByHeight(height);
+    static async getBranchSerialByHeight(height: number): Promise<number> {
+        return await Database.getBlockBranchSerialByHeight(height);
     }
 
     // Invalidate blocks higher than the block @startHeight

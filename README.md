@@ -4,7 +4,12 @@
 
 **NOTE**: This is not a stand-alone application. It is part of the project [satamotodb](https://github.com/tka85/satamotodb). Check out the [architecture plan](https://github.com/tka85/satamotodb/architecture.svg) for the various components.
 
-The bitcoin-sync image contains a Node.js application that exports Bitcoin's blockchain data (blocks, txs, inputs, outputs, addresses etc.) from a [satamotodb-bitcoin-node](https://github.com/tka85/satamotodb-bitcoin-node) and stores them in a Postgres database. Check satamotodb's [docker-compose.yml](https://github.com/tka85/satamotodb/blob/master/docker-compose.yml) to see how this image is used.
+The bitcoin-sync image contains a Node.js application that exports Bitcoin's blockchain data (blocks, txs, inputs, outputs, addresses etc.) from a [satamotodb-bitcoin-node](https://github.com/tka85/satamotodb-bitcoin-node) and stores them in a Postgres database. Check satamotodb's [docker-compose.yml](https://github.com/tka85/satamotodb/blob/master/docker-compose.yml) to see how this image is used and how it provides the config files needed by `satamotodb-bitcoin-sync` which here only contains empty configs:
+
+* appConfig.json
+* dbConfig.json
+* rpcConfig.json
+
 
 ## Reorg detection
 

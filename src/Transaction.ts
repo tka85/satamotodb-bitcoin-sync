@@ -1,11 +1,12 @@
 import Database from "./Database";
 import debug = require('debug');
-import appConfig from './appConfig.json';
+import appConfig from '../appConfig.json';
 
 const log = appConfig.debug.tx ? debug('satamoto:Transaction') : Function.prototype;
 
 class Transaction {
-    public blockhash: string;
+    public _txSerial: number;
+    public _blockSerial: number;
     public txid: string;
     public hash: string;
     public size: string;
@@ -17,9 +18,9 @@ class Transaction {
     public isCoinbase: boolean;
     public fee: number;
 
-    constructor({ blockhash, txid, hash, size, vsize, weight, version, locktime, hex, isCoinbase }
-        : { blockhash: string, txid: string, hash: string, size: string, vsize: string, weight: string, version: number, locktime: string, hex: string, isCoinbase: boolean }) {
-        this.blockhash = blockhash;
+    constructor({ _blockSerial, txid, hash, size, vsize, weight, version, locktime, hex, isCoinbase }
+        : { _blockSerial: number, txid: string, hash: string, size: string, vsize: string, weight: string, version: number, locktime: string, hex: string, isCoinbase: boolean }) {
+        this._blockSerial = _blockSerial;
         this.txid = txid;
         this.hash = hash;
         this.size = size;
@@ -32,12 +33,17 @@ class Transaction {
     }
 
     async save(): Promise<void> {
-        return await Database.saveTransaction(this);
+        this._txSerial = await Database.saveTransaction(this);
+        return Promise.resolve();
     }
 
+    /**
+     *
+     * @param fee   {string}        fee in satoshis
+     */
     async updateFee(fee: string): Promise<void> {
         this.fee = parseInt(fee, 10);
-        return await Database.saveTransactionFee(this);
+        return await Database.updateTransactionFee(this);
     }
 }
 

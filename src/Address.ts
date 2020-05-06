@@ -1,8 +1,9 @@
 import debug = require('debug');
 import JsonRpc from './JsonRpc';
-import appConfig from './appConfig.json';
+import appConfig from '../appConfig.json';
 
 const log = appConfig.debug.address ? debug('satamoto:address') : Function.prototype;
+
 class Address {
     static chain: string;
 

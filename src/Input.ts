@@ -1,31 +1,26 @@
 import Database from "./Database";
 import debug = require('debug');
-import appConfig from './appConfig.json';
+import appConfig from '../appConfig.json';
 
 const log = appConfig.debug.input ? debug('satamoto:Input') : Function.prototype;
 
 class Input {
-    public blockhash: string;
-    public txid: string;
+    public _inputSerial: number;
+    public _txSerial: number;
     public vin: number;
     public seq: number;
-    public outBlockhash: string;
-    public outTxid: string;
-    public outVout: number;
+    public _outOutputSerial: number;
     public outValue: number;
     public scriptAsm: string;
     public scriptHex: string;
     public txInWitness: string[];
 
-    constructor({ blockhash, txid, vin, seq, outBlockhash, outTxid, outVout, outValue, scriptAsm, scriptHex, txInWitness }
-        : { blockhash: string, txid: string, vin: number, seq: number, outBlockhash: string, outTxid: string, outVout: number, outValue: number, scriptAsm: string, scriptHex: string, txInWitness: string[] }) {
-        this.blockhash = blockhash;
-        this.txid = txid;
+    constructor({ _txSerial, vin, seq, _outOutputSerial, outValue, scriptAsm, scriptHex, txInWitness }
+        : { _txSerial: number, vin: number, seq: number, _outOutputSerial: number, outValue: number, scriptAsm: string, scriptHex: string, txInWitness: string[] }) {
+        this._txSerial = _txSerial;
         this.vin = vin;
         this.seq = seq;
-        this.outBlockhash = outBlockhash;
-        this.outTxid = outTxid;
-        this.outVout = outVout;
+        this._outOutputSerial = _outOutputSerial;
         this.outValue = outValue;
         this.scriptAsm = scriptAsm;
         this.scriptHex = scriptHex;
@@ -33,7 +28,8 @@ class Input {
     }
 
     async save() {
-        return await Database.saveInput(this);
+        this._inputSerial = await Database.saveInput(this);
+        return Promise.resolve();
     }
 }
 

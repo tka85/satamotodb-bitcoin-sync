@@ -60,7 +60,7 @@ class Block {
     }
 
     async save(): Promise<void> {
-        this.setBranch();
+        await this.setBranch();
         this._blockSerial = await Database.saveBlock(this);
         return Promise.resolve();
     }

@@ -102,7 +102,6 @@ class Database {
         log(`Saving`, block);
         const sql = 'INSERT INTO block_btc(_branch_serial, blockhash, strippedsize, size, weight, height, version, versionhex, merkleroot, time, mediantime, nonce, bits, difficulty, chainwork, ntx, previousblockhash, _is_valid) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, true) RETURNING _block_serial';
         const params = [block._branchSerial, block.blockhash, block.strippedSize, block.size, block.weight, block.height, block.version, block.versionHex, block.merkleRoot, block.time, block.medianTime, block.nonce, block.bits, block.difficulty, block.chainwork, block.nTx, block.previousBlockhash];
-        log(`Saving block`, block);
         const insertedBlockSerial = await Database.doQuery(sql, params);
         return Promise.resolve(insertedBlockSerial.rows[0]._block_serial);
     }
@@ -116,7 +115,7 @@ class Database {
     }
 
     static async updateTransactionFee(tx: Transaction): Promise<void> {
-        log(`Saving fee for`, tx);
+        log(`Updating fee=${tx.fee} of`, tx);
         const sql = 'UPDATE tx_btc SET _fee = $1 WHERE _tx_serial=$2 AND _is_valid = true RETURNING _tx_serial';
         const params = [tx.fee, tx._txSerial];
         const updatedTxSerials = await Database.doQuery(sql, params);
@@ -146,6 +145,7 @@ class Database {
         let sql = 'INSERT INTO input_btc(_tx_serial, vin, _out_output_serial, out_value, seq, scriptasm, scripthex, txinwitness, _is_valid) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true) RETURNING _input_serial';
         let params = [i._txSerial, i.vin, i._outOutputSerial, i.outValue, i.seq, i.scriptAsm, i.scriptHex, i.txInWitness];
         const insertedInputSerial = await Database.doQuery(sql, params);
+        log(`Updating _spent_by_input_serial=${insertedInputSerial.rows[0]._input_serial} of output with _output_serial=${i._outOutputSerial}`)
         sql = 'UPDATE output_btc SET _spent_by_input_serial = $1, _is_spent = true WHERE _output_serial = $2 AND _is_valid = true RETURNING _output_serial';
         params = [insertedInputSerial.rows[0]._input_serial, i._outOutputSerial];
         const updatedOutputSerials = await Database.doQuery(sql, params);
@@ -156,12 +156,12 @@ class Database {
     }
 
     static async updateBlockCoinbase(block: Block): Promise<void> {
-        log(`Setting block seq/coinbase to ${block.seq}/${block.coinbase}`);
-        const sql = `UPDATE block_btc SET seq = $1, coinbase = $2 WHERE blockhash = $3 AND _is_valid = true RETURNING _block_serial`;
-        const params = [block.seq, block.coinbase, block.blockhash];
+        log(`Updating block seq=${block.seq} / coinbase=${block.coinbase} of _block_serial=${block._blockSerial}`);
+        const sql = `UPDATE block_btc SET seq = $1, coinbase = $2 WHERE _block_serial = $3 AND _is_valid = true RETURNING _block_serial`;
+        const params = [block.seq, block.coinbase, block._blockSerial];
         const updatedBlockSerials = await Database.doQuery(sql, params);
         if (updatedBlockSerials.rows.length !== 1) {
-            throw new DbError(`Should have a single *valid* block in db for blockhash=${block.blockhash} but found ${updatedBlockSerials.rows.length} (_block_serials: ${JSON.stringify(updatedBlockSerials.rows)})`, sql, params);
+            throw new DbError(`Should have a single *valid* block in db for _block_serial=${block._blockSerial} but found ${updatedBlockSerials.rows.length} (_block_serials: ${JSON.stringify(updatedBlockSerials.rows)})`, sql, params);
         }
         return Promise.resolve();
     }
@@ -218,7 +218,14 @@ class Database {
 
     // Invalidate blocks higher than the block @startHeight
     static async invalidateBlocksHigherThan(startHeight: number): Promise<void> {
-        await Database.doQuery('UPDATE block_btc SET _is_valid = false WHERE height > $1', [startHeight]);
+        log(`Invalidating blocks with height > ${startHeight}`);
+        const sql = 'UPDATE block_btc SET _is_valid = false WHERE height > $1 AND _is_valid = true RETURNING _block_serial';
+        const params = [startHeight];
+        const updatedBlockSerials = await Database.doQuery(sql, params);
+        if (!updatedBlockSerials.rows || updatedBlockSerials.rows.length === 0) {
+            throw new DbError(`Should have at least one *valid* block to invalidate but found ${updatedBlockSerials.rows}`, sql, params);
+        }
+        log(`Invalidated in total ${updatedBlockSerials.rows.length} blocks`);
         return Promise.resolve();
     }
 

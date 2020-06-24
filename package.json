@@ -15,7 +15,8 @@
     "json-rpc2": "2.0.0",
     "pg": "8.0.2",
     "tslint": "6.1.1",
-    "typescript": "3.8.3"
+    "typescript": "3.8.3",
+    "websocket-extensions": "0.1.4"
   },
   "devDependencies": {},
   "description": "Application that exports Bitcoin's blockchain data (blocks, txs, inputs, outputs, addresses etc.) and stores them into a Postgres database. Used by the satamotodb project.",
